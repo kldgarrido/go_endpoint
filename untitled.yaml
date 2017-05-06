@@ -1,0 +1,62 @@
+version: "3"
+
+services:
+
+  db:
+    image: postgres:latest
+    environment:
+      POSTGRES_PASSWORD: docker
+      POSTGRES_USER: docker
+
+  rabbitmq:
+    image: bitnami/rabbitmq:latest
+    ports:
+      - '4369:4369'
+      - '5672:5672'
+      - '25672:25672'
+      - '15672:15672'
+    networks:
+      - frontend
+    volumes:
+      - /path/to/rabbitmq-persistence:/bitnami/rabbitmq
+
+  web:
+    image: golang:1.8.1-alpine
+    build: .
+    depends_on:
+      rabbitmq:
+        condition: service_started
+    ports:
+      - "8080:8080"
+    networks:
+      - frontend
+    volumes:
+      - .:/go/src/service/user_endpoint
+    working_dir: /go/src/service/user_endpoint
+    environment:
+      - AMPQ_ADDRESS=amqp://guest:guest@localhost:567
+    command: go run user_endpoint/app/app.go
+
+  app:
+    image: golang:1.8.1-alpine
+    build: .
+    depends_on:
+      rabbitmq:
+        condition: service_started
+      db:
+        condition: service_started
+     networks:
+      - frontend
+    volumes:
+      - .:/go/src/user_consumer
+    working_dir: /go/src/user_consumer
+    command: go run user_consumer/app/app.go
+
+networks:
+  frontend:
+    # Use a custom driver
+    driver: custom-driver-1
+
+
+
+

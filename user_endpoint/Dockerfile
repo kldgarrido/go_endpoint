@@ -1,0 +1,3 @@
+FROM golang
+	
+EXPOSE 8080
